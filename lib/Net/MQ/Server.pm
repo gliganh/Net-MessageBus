@@ -1,4 +1,4 @@
-package Net::MQ;
+package Net::MQ::Server;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ - The great new Net::MQ!
+Net::MQ::Server - The great new Net::MQ::Server!
 
 =head1 VERSION
 
@@ -23,9 +23,9 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Net::MQ;
+    use Net::MQ::Server;
 
-    my $foo = Net::MQ->new();
+    my $foo = Net::MQ::Server->new();
     ...
 
 =head1 EXPORT
@@ -66,7 +66,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Net::MQ
+    perldoc Net::MQ::Server
 
 
 You can also look for information at:
@@ -108,4 +108,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Net::MQ
+1; # End of Net::MQ::Server

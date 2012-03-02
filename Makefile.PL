@@ -5,7 +5,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Net::MQ',
-    AUTHOR              => q{Horea Gligan <gliganh@gmail.com>},
+    AUTHOR              => q{Horea Gligan <horea@gmail.com>},
     VERSION_FROM        => 'lib/Net/MQ.pm',
     ABSTRACT_FROM       => 'lib/Net/MQ.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
