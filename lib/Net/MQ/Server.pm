@@ -16,10 +16,13 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-use base qw(Class::Accessor);
-use JSON;
+use base qw(Net::MQ::Base);
 
-__PACKAGE__->mk_ro_accessors(qw(type group sender payload));
+use JSON;
+use IO::Socket::INET;
+
+#handle gracefully the death of child ssh processes
+use POSIX ":sys_wait_h";
 
 =head1 SYNOPSIS
 
@@ -80,7 +83,7 @@ sub new {
     my $class = shift;
     
     my %params;
-    if (ref($_[0] eq "HASH")) {
+    if ((ref($_[0]) || '') eq "HASH") {
         %params = %{$_[0]};
     }
     else {
@@ -90,7 +93,7 @@ sub new {
     my $self = {
                 address => $params{address} || '127.0.0.1',
                 port    => $params{port} || '4500',
-                logger  => $params{logger} || create_default_logger(),
+                logger  => $params{logger} || Net::MQ::Base::create_default_logger(),
                 authenticate => $params{autenticate} || sub {return 1},
                 };
     
@@ -108,7 +111,7 @@ sub new {
 sub create_server_socket {
     my $self = shift;
     
-    my $server_sock= new IO::Socket::INET (
+    my $server_sock= IO::Socket::INET->new(
                                 LocalHost => $self->{address},
                                 LocalPort => $self->{port},
                                 Proto     => 'tcp',
@@ -133,13 +136,15 @@ sub create_server_socket {
 sub start {
     my $self = shift;
     
-    my $server_socket = $self->create_server_socket();
+    $self->{server_socket} = $self->create_server_socket();
     
-    my $server_sel = new IO::Select ($server_socket);
+    my $server_sel = IO::Select->new($self->{server_socket});
     
     my $cache = {};
     
-    while (1) {
+    $self->{run} = 1;
+    
+    while ($self->{run} == 1) {
     
         my @exceptions = $server_sel->has_exception(0);
         foreach my $broken_socket (@exceptions) {
@@ -149,47 +154,45 @@ sub start {
              };
         }
      
-        for (my $msg_loop=0;$msg_loop<20;$msg_loop++) {
-     
-            my @ready = $server_sel->can_read(0.01);
-     
-            next unless scalar(@ready);
-     
-            foreach my $fh (@ready) {
+        my @ready = $server_sel->can_read(0.01);
+ 
+        next unless scalar(@ready);
+ 
+        foreach my $fh (@ready) {
+            
+            if( $fh == $self->{server_socket} ) {
+                # Accept the incoming socket.
+                my $new = $fh->accept;
                 
-                if( $fh == $server_socket ) {
-                    # Accept the incoming socket.
-                    my $new = $fh->accept;
+                next unless $new; #in case the ssl connection failed
+                
+                my $straddr = $self->get_peer_address($new);
+                
+                $self->logger->info("Accepted from : $straddr\n");
+                
+                $server_sel->add($new);
+                
+            } else {
+                # Process socket
+                local $\ = "\n";
+                my $text =  readline($fh);
+                
+                my $straddr = 'unknown';
+                eval {
+                    $straddr = $self->get_peer_address($fh);
+                };
+
+                if ($text) {
+
+                    $self->logger->debug("Request from $straddr : '$text'");
                     
-                    next unless $new; #in case the ssl connection failed
-                    
-                    my $straddr = $self->get_peer_address($new);
-                    
-                    $self->logger->info("Accepted from : $straddr\n");
-                    
-                    $server_sel->add($new);
-                    
-                } else {
-                    # Process socket
-                    my($text); sysread($fh,$text,8192);
-                    
-                    my $straddr = 'unknown';
-                    eval {
-                        $straddr = $self->get_peer_address($fh);
-                    };
-    
-                    if ($text) {
-    
-                        $self->logger->debug("Request from $straddr : '$text'");
-                        
-                                        
-                    }
-                    else {
-                       $self->logger->info("Peear $straddr closed connection\n");
-                       delete $cache->{$fh} if defined $cache->{$fh};
-                       $server_sel->remove($fh);
-                       close ($fh);
-                    }
+                                    
+                }
+                else {
+                   $self->logger->info("Peear $straddr closed connection\n");
+                   delete $cache->{$fh} if defined $cache->{$fh};
+                   $server_sel->remove($fh);
+                   close ($fh);
                 }
             }
         }
@@ -209,39 +212,79 @@ sub daemon {
         $self->logger->error('An instance of the server is already running!');
     }
     
+    $SIG{CHLD} = sub {
     
+        # don't change $! and $? outside handler
+        local ( $!, $? );
+        
+        while ( my $pid = waitpid( -1, WNOHANG ) > 0 ) {
+           #Wait for the child processes to exit 
+        }
+        return 1;
+    };
+    
+    my $pid;
+    
+    if ( $pid = fork() ) {
+        $self->{pid} = $pid;
+    }
+    else {
+        $SIG{INT} = $SIG{HUP} = sub {
+                                    $self->{run} = 0;
+                                    $self->{server_socket}->close();
+                                };
+        $self->start();
+        exit(0);
+    }
+    
+    return 1;
 }
 
-=head2 logger
+=head2 stop
 
-    Getter / Setter for the logging object
-
+    Stops a previously started daemon
+    
 =cut
-sub logger {
+sub stop {
     my $self = shift;
-    if ($_[0]) {
-        $self->{logger} = $_[0];
+    
+    if (! defined $self->{pid} || ! kill(0,$self->{pid}) ) {
+        $self->logger->error('No Net::MQ::Server is running (pid : '.$self->{pid}.')!');
+        return 0;
     }
-    return $self->{logger};
+    
+    kill 15, $self->{pid};
+    
+    sleep 1;
+    
+    my @x = `ps fax | grep $self->{pid}`;
+    warn @x;
+    
+    
+    if ( kill(0,$self->{pid}) ) {
+        $self->logger->error('Failed to stop the Net::MQ::Server (pid : '.$self->{pid}.')! ');
+        return 0;
+    }
+    
+    delete $self->{pid};
+    
+    return 1;
 }
 
 
-=head2 create_default_logger
+=head2 is_running
 
-    Creates the default logger that will be used
+    Stops a previously started daemon
     
 =cut
-sub create_default_logger {
-    my $logger;
-    eval '
-        require Log::Log4perl qw(:easy);
-        $logger = Log::Log4perl->easy_init($INFO);
-    ';
-    if ($!) {
-        die "Error creating default logger for Net::MQ::Server,".
-            " please specify one or install Log::Log4Perl!";
+sub is_running {
+    my $self = shift;
+    
+    if (! defined $self->{pid} || ! kill(0,$self->{pid}) ) {
+        return 0;
     }
-    return $logger;
+    
+    return 1;
 }
 
 =head2 get_peer_address

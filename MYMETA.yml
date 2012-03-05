@@ -1,5 +1,5 @@
 ---
-abstract: 'The great new Net::MQ!'
+abstract: 'Pure Perl simple message queue'
 author:
   - 'Horea Gligan <horea@gmail.com>'
 build_requires:

@@ -165,6 +165,7 @@ O_FILES  =
 H_FILES  = 
 MAN1PODS = 
 MAN3PODS = lib/Net/MQ.pm \
+	lib/Net/MQ/Base.pm \
 	lib/Net/MQ/Message.pm \
 	lib/Net/MQ/Server.pm
 
@@ -189,6 +190,7 @@ PERL_ARCHIVE_AFTER =
 
 
 TO_INST_PM = lib/Net/MQ.pm \
+	lib/Net/MQ/Base.pm \
 	lib/Net/MQ/Message.pm \
 	lib/Net/MQ/Server.pm
 
@@ -196,6 +198,8 @@ PM_TO_BLIB = lib/Net/MQ.pm \
 	blib/lib/Net/MQ.pm \
 	lib/Net/MQ/Message.pm \
 	blib/lib/Net/MQ/Message.pm \
+	lib/Net/MQ/Base.pm \
+	blib/lib/Net/MQ/Base.pm \
 	lib/Net/MQ/Server.pm \
 	blib/lib/Net/MQ/Server.pm
 
@@ -421,10 +425,12 @@ POD2MAN = $(POD2MAN_EXE)
 manifypods : pure_all  \
 	lib/Net/MQ.pm \
 	lib/Net/MQ/Message.pm \
+	lib/Net/MQ/Base.pm \
 	lib/Net/MQ/Server.pm
 	$(NOECHO) $(POD2MAN) --section=3 --perm_rw=$(PERM_RW) \
 	  lib/Net/MQ.pm $(INST_MAN3DIR)/Net::MQ.$(MAN3EXT) \
 	  lib/Net/MQ/Message.pm $(INST_MAN3DIR)/Net::MQ::Message.$(MAN3EXT) \
+	  lib/Net/MQ/Base.pm $(INST_MAN3DIR)/Net::MQ::Base.$(MAN3EXT) \
 	  lib/Net/MQ/Server.pm $(INST_MAN3DIR)/Net::MQ::Server.$(MAN3EXT) 
 
 
@@ -491,7 +497,7 @@ realclean purge ::  clean realclean_subdirs
 metafile : create_distdir
 	$(NOECHO) $(ECHO) Generating META.yml
 	$(NOECHO) $(ECHO) '---' > META_new.yml
-	$(NOECHO) $(ECHO) 'abstract: '\''The great new Net::MQ!'\''' >> META_new.yml
+	$(NOECHO) $(ECHO) 'abstract: '\''Pure Perl simple message queue'\''' >> META_new.yml
 	$(NOECHO) $(ECHO) 'author:' >> META_new.yml
 	$(NOECHO) $(ECHO) '  - '\''Horea Gligan <horea@gmail.com>'\''' >> META_new.yml
 	$(NOECHO) $(ECHO) 'build_requires:' >> META_new.yml
@@ -515,7 +521,7 @@ metafile : create_distdir
 	-$(NOECHO) $(MV) META_new.yml $(DISTVNAME)/META.yml
 	$(NOECHO) $(ECHO) Generating META.json
 	$(NOECHO) $(ECHO) '{' > META_new.json
-	$(NOECHO) $(ECHO) '   "abstract" : "The great new Net::MQ!",' >> META_new.json
+	$(NOECHO) $(ECHO) '   "abstract" : "Pure Perl simple message queue",' >> META_new.json
 	$(NOECHO) $(ECHO) '   "author" : [' >> META_new.json
 	$(NOECHO) $(ECHO) '      "Horea Gligan <horea@gmail.com>"' >> META_new.json
 	$(NOECHO) $(ECHO) '   ],' >> META_new.json
@@ -850,7 +856,7 @@ testdb_static :: testdb_dynamic
 # Creates a PPD (Perl Package Description) for a binary distribution.
 ppd :
 	$(NOECHO) $(ECHO) '<SOFTPKG NAME="$(DISTNAME)" VERSION="0.01">' > $(DISTNAME).ppd
-	$(NOECHO) $(ECHO) '    <ABSTRACT>The great new Net::MQ!</ABSTRACT>' >> $(DISTNAME).ppd
+	$(NOECHO) $(ECHO) '    <ABSTRACT>Pure Perl simple message queue</ABSTRACT>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '    <AUTHOR>Horea Gligan &lt;horea@gmail.com&gt;</AUTHOR>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '    <IMPLEMENTATION>' >> $(DISTNAME).ppd
 	$(NOECHO) $(ECHO) '        <REQUIRE NAME="Test::More" />' >> $(DISTNAME).ppd
@@ -866,6 +872,7 @@ pm_to_blib : $(FIRST_MAKEFILE) $(TO_INST_PM)
 	$(NOECHO) $(ABSPERLRUN) -MExtUtils::Install -e 'pm_to_blib({@ARGV}, '\''$(INST_LIB)/auto'\'', q[$(PM_FILTER)], '\''$(PERM_DIR)'\'')' -- \
 	  lib/Net/MQ.pm blib/lib/Net/MQ.pm \
 	  lib/Net/MQ/Message.pm blib/lib/Net/MQ/Message.pm \
+	  lib/Net/MQ/Base.pm blib/lib/Net/MQ/Base.pm \
 	  lib/Net/MQ/Server.pm blib/lib/Net/MQ/Server.pm 
 	$(NOECHO) $(TOUCH) pm_to_blib
 
