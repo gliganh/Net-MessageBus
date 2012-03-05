@@ -256,11 +256,7 @@ sub stop {
     kill 15, $self->{pid};
     
     sleep 1;
-    
-    my @x = `ps fax | grep $self->{pid}`;
-    warn @x;
-    
-    
+        
     if ( kill(0,$self->{pid}) ) {
         $self->logger->error('Failed to stop the Net::MQ::Server (pid : '.$self->{pid}.')! ');
         return 0;
