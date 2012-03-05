@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ - The great new Net::MQ!
+Net::MQ - Pure Perl simple message queue
 
 =head1 VERSION
 
@@ -16,6 +16,9 @@ Version 0.01
 
 our $VERSION = '0.01';
 
+use base 'Net::MQ::Base';
+use IO::Socket::INET;
+use IO::Select;
 
 =head1 SYNOPSIS
 
@@ -25,28 +28,94 @@ Perhaps a little code snippet.
 
     use Net::MQ;
 
-    my $foo = Net::MQ->new();
+    my $mq = Net::MQ->new(server => '127.0.0.1');
+    
+    $mq->subscribe_to_all();
+    or
+    $mq->subscribe(group => 'test');
+    $mq->subscribe(sender => 'test_process_1');
     ...
-
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+    
+    my @messages = $mq->pending_messages();
+    or
+    while (my $message = $mq->next_message()) {
+        ...
+    }
 
 =head1 SUBROUTINES/METHODS
 
-=head2 function1
+=head2 new
+
+    Creates a new New::MQ object
+
+=cut
+sub new {
+    my $class = shift;
+    
+    my %params;
+    if ((ref($_[0]) || '') eq "HASH") {
+        %params = %{$_[0]};
+    }
+    else {
+        %params = @_;
+    }
+    
+    my $self = {
+                server_address => $params{server} || '127.0.0.1',
+                server_port    => $params{port} || '4500',
+                logger         => $params{logger} || Net::MQ::Base::create_default_logger(),
+                username       => $params{username},
+                password       => $params{password},
+                };
+    
+    bless $self, __PACKAGE__;
+    
+    $self->connect_to_server();
+    
+    return $self;
+}
+
+=head2 connect_to_server
+
+   Creates a connection to the Net::MQ server 
 
 =cut
 
-sub function1 {
+sub connect_to_server {
+    my $self = shift;
+    
+    $self->{server_socket} = IO::Socket::INET->new(
+                                PeerHost => $self->{server_address},
+                                PeerPort => $self->{server_port},
+                                Proto    => 'tcp',
+								Timeout  => 1,
+	                            ReuseAddr => 1,
+                                Blocking  => 1,
+								) || die "Cannot connect to Net::MQ server";
+    
+    $self->{server_sel} = IO::Select->new($self->{server_socket});
 }
 
 =head2 function2
 
 =cut
 
-sub function2 {
+sub send {
+    my $self = shift;
+    
+    my $message;
+    
+    if (ref($_[0]) eq "Net::MQ::Message") {
+        $message = $_[0];
+    }
+    elsif (ref($_[0]) eq "HASH") {
+        $message = Net::MQ::Message->new($_[0]);
+    }
+    else {
+        $message = Net::MQ::Message->new(\%{@_});
+    }
+    
+    return $self->send_to_server($message);
 }
 
 =head1 AUTHOR

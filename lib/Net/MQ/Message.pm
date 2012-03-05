@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ::Message - The great new Net::MQ::Message!
+Net::MQ::Message - Pure Perl generic message queue
 
 =head1 VERSION
 
@@ -17,9 +17,16 @@ Version 0.01
 our $VERSION = '0.01';
 
 
+use base qw(Class::Accessor);
+use JSON;
+
+
+__PACKAGE__->mk_ro_accessors(qw(type group sender payload));
+
+
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module implements a pure perl message queue that aloows
 
 Perhaps a little code snippet.
 
