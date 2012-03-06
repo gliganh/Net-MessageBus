@@ -39,7 +39,7 @@ sub create_default_logger {
     my $logger;
     eval {
         use Log::Log4perl qw(:easy);
-        Log::Log4perl->easy_init();
+        Log::Log4perl->easy_init($ERROR);
         $logger = Log::Log4perl->get_logger;
     };
     if ($@) {

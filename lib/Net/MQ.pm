@@ -17,8 +17,12 @@ Version 0.01
 our $VERSION = '0.01';
 
 use base 'Net::MQ::Base';
+
+use Net::MQ::Message;
+
 use IO::Socket::INET;
 use IO::Select;
+use JSON;
 
 =head1 SYNOPSIS
 
@@ -28,7 +32,9 @@ Perhaps a little code snippet.
 
     use Net::MQ;
 
-    my $mq = Net::MQ->new(server => '127.0.0.1');
+    my $mq = Net::MQ->new(server => '127.0.0.1',
+                          group => 'backend',
+                          sender => 'machine1');
     
     $mq->subscribe_to_all();
     or
@@ -64,8 +70,11 @@ sub new {
                 server_address => $params{server} || '127.0.0.1',
                 server_port    => $params{port} || '4500',
                 logger         => $params{logger} || Net::MQ::Base::create_default_logger(),
+                group          => $params{group},
+                sender         => $params{sender},
                 username       => $params{username},
                 password       => $params{password},
+                msgqueue       => [],
                 };
     
     bless $self, __PACKAGE__;
@@ -94,9 +103,19 @@ sub connect_to_server {
 								) || die "Cannot connect to Net::MQ server";
     
     $self->{server_sel} = IO::Select->new($self->{server_socket});
+    
+    $self->authenticate() || die "Authentication failed";
 }
 
-=head2 function2
+=head2 send
+
+    Send a new messge to the message queue
+    
+    Usage :
+    
+    $mq->send( $message );
+    or
+    $mq->send( type => 'alert', payload => { a => 1, b => 2 }  );
 
 =cut
 
@@ -109,14 +128,151 @@ sub send {
         $message = $_[0];
     }
     elsif (ref($_[0]) eq "HASH") {
-        $message = Net::MQ::Message->new($_[0]);
+        $message = Net::MQ::Message->new({ sender => $self->{sender},
+                                           group  => $self->{group},
+                                           %{$_[0]},
+                                         });
     }
     else {
-        $message = Net::MQ::Message->new(\%{@_});
+        $message = Net::MQ::Message->new({ sender => $self->{sender},
+                                           group  => $self->{group},
+                                          @_,
+                                         });
     }
     
-    return $self->send_to_server($message);
+    return $self->send_to_server(message => $message);
 }
+
+
+=head2 send_to_server
+
+    Sends the given message to the server
+
+=cut
+sub send_to_server {
+    my $self = shift;
+    my ($type,$object) = @_;
+    
+    if (ref($object) eq "Net::MQ::Message") {
+        $object = $object->serialize();
+    }
+    
+    local $\ = "\n";
+    local $/ = "\n";
+    
+    my $socket = $self->{server_socket};
+    
+    eval {
+        print $socket to_json( {type => $type, payload => $object} );
+    };
+    
+    if ($@) {
+        $self->logger->error("Message could not be sent! : $@");
+        return 0;
+    }
+    
+    my $response = $self->get_response();
+    
+    if (! $response->{status}) {
+        $self->logger->error('Error received from server: '.$response->{status_message});
+        return 0;
+    }
+    
+    return 1;
+}
+
+
+=head2 authenticate
+
+    Sends a authenication request to the server
+    
+=cut
+sub authenticate {
+    my $self = shift;
+    
+    return $self->send_to_server('authenticate',
+                                    {
+                                        username => $self->{username},
+                                        password => $self->{password},
+                                    }
+                                 );
+}
+
+=head2 get_response
+
+    Returns the response received from the server for the last request
+
+=cut
+sub get_response {
+    my $self = shift;
+    
+    while (! defined $self->{response}) {
+        $self->read_server_messages();
+    }
+    
+    return delete $self->{response};
+}
+
+
+=head2 read_server_messages
+
+    Reads all the messages received from the server and adds the to the message list
+
+=cut
+sub read_server_messages {
+    my $self = shift;
+    
+    my @ready;
+    
+    local $/ = "\n";
+     
+    while ( @ready = $self->{server_sel}->can_read(0.01) ) {   
+    
+        foreach my $fh (@ready) {
+            my $text = readline $fh;
+            chomp $text;
+            
+            my $data = from_json($text);
+            
+            if (defined $data->{type} && $data->{type} eq 'message') {
+                push @{$self->{msgqueue}}, Net::MQ::Message->new($data->{payload});
+            }
+            else {
+                $self->{response} = $data;
+            }
+        }
+        
+    }
+}
+
+=head2 get_next_message
+
+    Returns the message in received from the server
+    
+=cut
+sub get_next_message {
+    my $self = shift;
+    
+    $self->read_server_messages();
+    
+    return shift @{$self->{msgqueue}};
+}
+
+
+=head2 get_messages
+
+    Returns all the messages received until now from the server
+    
+=cut
+sub get_messages {
+    my $self = shift;
+    
+    my @messages = @{$self->{msgqueue}};
+    $self->{msgqueue} = [];
+    
+    return @messages;
+}
+
 
 =head1 AUTHOR
 

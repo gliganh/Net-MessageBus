@@ -97,6 +97,14 @@ sub new {
                 authenticate => $params{autenticate} || sub {return 1},
                 };
     
+    $self->{subscriptions} = {
+                              all => [],
+                              groups => {},
+                              senders => {},
+                            };
+    
+    $self->{authenticated} = {};
+    
     bless $self, __PACKAGE__;
     
     return $self;
@@ -140,8 +148,6 @@ sub start {
     
     my $server_sel = IO::Select->new($self->{server_socket});
     
-    my $cache = {};
-    
     $self->{run} = 1;
     
     while ($self->{run} == 1) {
@@ -175,7 +181,11 @@ sub start {
             } else {
                 # Process socket
                 local $\ = "\n";
-                my $text =  readline($fh);
+                local $/ = "\n";
+                
+                my $text = readline($fh);
+                
+                chomp($text);
                 
                 my $straddr = 'unknown';
                 eval {
@@ -183,14 +193,58 @@ sub start {
                 };
 
                 if ($text) {
+                    
+                    $self->{client_socket} = $fh;
 
                     $self->logger->debug("Request from $straddr : '$text'");
                     
+                    my $request;
+                    eval {
+                        $request = from_json($text);
+                    };
+                    
+                    if (@!) {
+                        print $fh to_json({status => 0, status_message => $@ });
+                    }
+                    elsif ($request->{type} eq "message") {
+                        
+                        print $fh to_json({status => 1});
+                        
+                        my $message = Net::MQ::Message->new($request->{payload});
+                        
+                        $self->send_message($message);
+                    }
+                    elsif ($request->{type} eq "authenticate") {
+                        
+                        my %data = %{$request->{payload}};
+                        
+                        my $auth = $self->{authenticate}->(
+                                                @data{qw/username password/},
+                                                $self->get_peer_address($fh)
+                                                );
+                        
+                        $self->{authenticated}->{$fh} = $auth;
+                        
+                        print $fh to_json({status => $auth});
+                    }
+                    elsif ($request->{type} eq "subscribe") {
+                        
+                        $self->subscribe_client($request->{payload});
+
+                        print $fh to_json({status => 1});
+                    }
+                    else {
+                        print $fh to_json({status => 0, status_message => 'Invalid request!'});
+                    }
+            
                                     
                 }
                 else {
                    $self->logger->info("Peear $straddr closed connection\n");
-                   delete $cache->{$fh} if defined $cache->{$fh};
+                   
+                   $self->unsubscribe_client($fh);
+                   delete $self->{authenticated}->{$fh};
+                   
                    $server_sel->remove($fh);
                    close ($fh);
                 }
@@ -297,6 +351,98 @@ sub get_peer_address {
     my $straddr = inet_ntoa($iaddr);
     
     return $straddr;
+}
+
+=head2 subscribe_client
+
+    Adds the client to the subscription list which he specified
+    
+=cut
+sub subscribe_client {
+    my $self = shift;
+    my $data = shift;
+    
+    if (defined $data->{all}) {
+        $self->{subscriptions}->{all} ||= [];
+        push @{$self->{subscriptions}->{all}}, $self->{client_socket};
+    }
+    elsif (defined $data->{group}) {
+        $self->{subscriptions}->{groups}->{$data->{group}} ||= [];
+        push @{$self->{subscriptions}->{groups}->{$data->{group}}}, $self->{client_socket};
+    }
+    elsif (defined $data->{sender}) {
+        $self->{subscriptions}->{senders}->{$data->{sender}} ||= [];
+        push @{$self->{subscriptions}->{senders}->{$data->{sender}}}, $self->{client_socket};
+    }
+    elsif (defined $data->{unsubscribe}) {
+        $self->unsubscribe_client($self->{client_socket});
+    }
+    else {
+        return 0;
+    }
+    
+    return 1;
+}
+
+
+=head2 unsubscribe_client
+
+    Removes the given socket from all subscription lists
+    
+=cut
+sub unsubscribe_client {
+    my $self = shift;
+    my $fh = shift;
+    
+    $self->{subscriptions}->{all} = [ grep { $_ != $fh } @{$self->{subscriptions}->{all}} ];
+    foreach my $group (keys %{$self->{subscriptions}->{groups}}) {
+        $self->{subscriptions}->{groups}->{$group} = [ grep { $_ != $fh } @{$self->{subscriptions}->{groups}->{$group}} ];
+    }
+    foreach my $sender (keys %{$self->{subscriptions}->{senders}}) {
+        $self->{subscriptions}->{senders}->{$sender} = [ grep { $_ != $fh } @{$self->{subscriptions}->{senders}->{$sender}} ];
+    }
+}
+
+=head2 clients_registered_for_message 
+
+    Returns a list containing all the file handles registered to receive the given message
+
+=cut
+sub clients_registered_for_message {
+    my $self = shift;
+    my $message = shift;
+    
+    my @handles = ();
+    push @handles, @{ $self->{subscriptions}->{all} || [] };
+    push @handles, @{ $self->{subscriptions}->{groups}->{$message->group()} || [] };
+    push @handles, @{ $self->{subscriptions}->{senders}->{$message->sender()} || [] };
+    
+    my %seen = ();
+    @handles = grep { $_ != $self->{client_socket} }
+               grep { $self->{authenticated}->{$_} }
+               grep { ! $seen{$_} ++ } @handles;
+    
+    return @handles;
+}
+
+=head2 send_message
+
+    Sends the given message to the clients that subscribed to the group or sender of the messages
+
+=cut
+sub send_message {
+    my $self = shift;
+    my $message = shift;
+    
+    my @recipients = $self->clients_registered_for_message($message);
+    
+    local $\ = "\n";
+    
+    foreach my $client ( @recipients ) {
+        eval {
+            print $client to_json({ type => 'message' , payload => $message->serialize() });
+        };
+    }
 }
 
 =head1 AUTHOR

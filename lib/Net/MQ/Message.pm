@@ -16,10 +16,7 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-
 use base qw(Class::Accessor);
-use JSON;
-
 
 __PACKAGE__->mk_ro_accessors(qw(type group sender payload));
 
@@ -42,18 +39,34 @@ if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
 
-=head2 function1
+=head2 new
+
+    Creates a new Net::MQ::Message object
 
 =cut
 
-sub function1 {
+sub new {
+    my $class = shift;
+    my %params = %{shift()};
+    
+    my $self = __PACKAGE__->SUPER::new({%params});
+    
+    return $self;
 }
 
-=head2 function2
+=head2 serialize
 
 =cut
 
-sub function2 {
+sub serialize {
+    my $self = shift;
+    
+    return {
+            sender => $self->sender(),
+            group  => $self->group(),
+            type   => $self->type(),
+            payload => $self->payload()
+           };
 }
 
 =head1 AUTHOR

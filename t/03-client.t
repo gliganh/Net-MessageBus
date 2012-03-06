@@ -3,7 +3,7 @@
 use 5.006;
 use strict;
 use warnings;
-use Test::More tests => 3;
+use Test::More tests => 4;
 
 use Net::MQ;
 use Net::MQ::Server;
@@ -13,11 +13,13 @@ $server->daemon();
 
 ok($server->is_running(),'Server running');
 
-{
+{ #actual client tests
 
-my $mq = Net::MQ->new();
+my $mq = Net::MQ->new(sender => 'test',group => 'test_group');
 
 isa_ok($mq,"Net::MQ");
+
+ok($mq->send(type => 123, payload => 'test message'), 'Message 1 sent');
 
 
 }
@@ -25,3 +27,4 @@ isa_ok($mq,"Net::MQ");
 $server->stop();
 
 ok(! $server->is_running(),'Server stopped');
+
