@@ -4,10 +4,10 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    NAME                => 'Net::MQ',
+    NAME                => 'Net::MessageBus',
     AUTHOR              => q{Horea Gligan <horea@gmail.com>},
-    VERSION_FROM        => 'lib/Net/MQ.pm',
-    ABSTRACT_FROM       => 'lib/Net/MQ.pm',
+    VERSION_FROM        => 'lib/Net/MessageBus.pm',
+    ABSTRACT_FROM       => 'lib/Net/MessageBus.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
       ? ('LICENSE'=> 'perl')
       : ()),
@@ -16,5 +16,5 @@ WriteMakefile(
         'Test::More' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Net-MQ-*' },
+    clean               => { FILES => 'Net-MessageBus-*' },
 );

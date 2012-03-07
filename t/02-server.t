@@ -5,16 +5,16 @@ use strict;
 use warnings;
 use Test::More tests => 5;
 
-use Net::MQ::Server;
+use Net::MessageBus::Server;
 
-my $mq_server = Net::MQ::Server->new();
+my $MessageBus_server = Net::MessageBus::Server->new();
 
-isa_ok($mq_server,"Net::MQ::Server");
+isa_ok($MessageBus_server,"Net::MessageBus::Server");
 
-ok($mq_server->daemon(),'Server started');
+ok($MessageBus_server->daemon(),'Server started');
 
-ok($mq_server->is_running(),'Server is running');
+ok($MessageBus_server->is_running(),'Server is running');
 
-ok($mq_server->stop(),'Stop command worked');
+ok($MessageBus_server->stop(),'Stop command worked');
 
-ok(! $mq_server->is_running(),'Server is not running anymore');
+ok(! $MessageBus_server->is_running(),'Server is not running anymore');

@@ -1,4 +1,4 @@
-package Net::MQ::Server;
+package Net::MessageBus::Server;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ::Server - The great new Net::MQ::Server!
+Net::MessageBus::Server - The great new Net::MessageBus::Server!
 
 =head1 VERSION
 
@@ -16,7 +16,7 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-use base qw(Net::MQ::Base);
+use base qw(Net::MessageBus::Base);
 
 use JSON;
 use IO::Socket::INET;
@@ -26,26 +26,26 @@ use POSIX ":sys_wait_h";
 
 =head1 SYNOPSIS
 
-This module creates a new Net::MQ server running on the specified address/port
+This module creates a new Net::MessageBus server running on the specified address/port
 
 Usage :
 
-    use Net::MQ::Server;
+    use Net::MessageBus::Server;
 
-    my $mq_server = Net::MQ::Server->new(
+    my $MessageBus_server = Net::MessageBus::Server->new(
                         address => '127.0.0.1',
                         port    => '15000',
                         logger  => $logger,
                         authenticate => \&authenticate_method,
                     );
                     
-    $mq_server->start();
+    $MessageBus_server->start();
     
     or
     
-    $mq_server->daemon() || die "Cannot run NetMQ in background!"
+    $MessageBus_server->daemon() || die "Cannot run NetMessageBus in background!"
     ...
-    $mq_server->stop(); #if started as a daemon.
+    $MessageBus_server->stop(); #if started as a daemon.
     
 
 =head1 SUBROUTINES/METHODS
@@ -93,7 +93,7 @@ sub new {
     my $self = {
                 address => $params{address} || '127.0.0.1',
                 port    => $params{port} || '4500',
-                logger  => $params{logger} || Net::MQ::Base::create_default_logger(),
+                logger  => $params{logger} || Net::MessageBus::Base::create_default_logger(),
                 authenticate => $params{autenticate} || sub {return 1},
                 };
     
@@ -185,14 +185,14 @@ sub start {
                 
                 my $text = readline($fh);
                 
-                chomp($text);
-                
                 my $straddr = 'unknown';
                 eval {
                     $straddr = $self->get_peer_address($fh);
                 };
 
                 if ($text) {
+                    
+                    chomp($text);
                     
                     $self->{client_socket} = $fh;
 
@@ -210,7 +210,7 @@ sub start {
                         
                         print $fh to_json({status => 1});
                         
-                        my $message = Net::MQ::Message->new($request->{payload});
+                        my $message = Net::MessageBus::Message->new($request->{payload});
                         
                         $self->send_message($message);
                     }
@@ -303,7 +303,7 @@ sub stop {
     my $self = shift;
     
     if (! defined $self->{pid} || ! kill(0,$self->{pid}) ) {
-        $self->logger->error('No Net::MQ::Server is running (pid : '.$self->{pid}.')!');
+        $self->logger->error('No Net::MessageBus::Server is running (pid : '.$self->{pid}.')!');
         return 0;
     }
     
@@ -312,7 +312,7 @@ sub stop {
     sleep 1;
         
     if ( kill(0,$self->{pid}) ) {
-        $self->logger->error('Failed to stop the Net::MQ::Server (pid : '.$self->{pid}.')! ');
+        $self->logger->error('Failed to stop the Net::MessageBus::Server (pid : '.$self->{pid}.')! ');
         return 0;
     }
     
@@ -451,8 +451,8 @@ Horea Gligan, C<< <horea at gmail.com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-net-mq at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MQ>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-net-MessageBus at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MessageBus>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -462,7 +462,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Net::MQ::Server
+    perldoc Net::MessageBus::Server
 
 
 You can also look for information at:
@@ -471,19 +471,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MQ>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MessageBus>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Net-MQ>
+L<http://annocpan.org/dist/Net-MessageBus>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Net-MQ>
+L<http://cpanratings.perl.org/d/Net-MessageBus>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Net-MQ/>
+L<http://search.cpan.org/dist/Net-MessageBus/>
 
 =back
 
@@ -504,4 +504,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Net::MQ::Server
+1; # End of Net::MessageBus::Server

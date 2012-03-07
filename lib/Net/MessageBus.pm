@@ -1,4 +1,4 @@
-package Net::MQ;
+package Net::MessageBus;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ - Pure Perl simple message queue
+Net::MessageBus - Pure Perl simple message queue
 
 =head1 VERSION
 
@@ -16,9 +16,9 @@ Version 0.01
 
 our $VERSION = '0.01';
 
-use base 'Net::MQ::Base';
+use base 'Net::MessageBus::Base';
 
-use Net::MQ::Message;
+use Net::MessageBus::Message;
 
 use IO::Socket::INET;
 use IO::Select;
@@ -30,21 +30,21 @@ Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
-    use Net::MQ;
+    use Net::MessageBus;
 
-    my $mq = Net::MQ->new(server => '127.0.0.1',
+    my $MessageBus = Net::MessageBus->new(server => '127.0.0.1',
                           group => 'backend',
                           sender => 'machine1');
     
-    $mq->subscribe_to_all();
+    $MessageBus->subscribe_to_all();
     or
-    $mq->subscribe(group => 'test');
-    $mq->subscribe(sender => 'test_process_1');
+    $MessageBus->subscribe(group => 'test');
+    $MessageBus->subscribe(sender => 'test_process_1');
     ...
     
-    my @messages = $mq->pending_messages();
+    my @messages = $MessageBus->pending_messages();
     or
-    while (my $message = $mq->next_message()) {
+    while (my $message = $MessageBus->next_message()) {
         ...
     }
 
@@ -52,7 +52,7 @@ Perhaps a little code snippet.
 
 =head2 new
 
-    Creates a new New::MQ object
+    Creates a new New::MessageBus object
 
 =cut
 sub new {
@@ -69,7 +69,7 @@ sub new {
     my $self = {
                 server_address => $params{server} || '127.0.0.1',
                 server_port    => $params{port} || '4500',
-                logger         => $params{logger} || Net::MQ::Base::create_default_logger(),
+                logger         => $params{logger} || Net::MessageBus::Base::create_default_logger(),
                 group          => $params{group},
                 sender         => $params{sender},
                 username       => $params{username},
@@ -86,7 +86,7 @@ sub new {
 
 =head2 connect_to_server
 
-   Creates a connection to the Net::MQ server 
+   Creates a connection to the Net::MessageBus server 
 
 =cut
 
@@ -100,7 +100,7 @@ sub connect_to_server {
 								Timeout  => 1,
 	                            ReuseAddr => 1,
                                 Blocking  => 1,
-								) || die "Cannot connect to Net::MQ server";
+								) || die "Cannot connect to Net::MessageBus server";
     
     $self->{server_sel} = IO::Select->new($self->{server_socket});
     
@@ -113,9 +113,9 @@ sub connect_to_server {
     
     Usage :
     
-    $mq->send( $message );
+    $MessageBus->send( $message );
     or
-    $mq->send( type => 'alert', payload => { a => 1, b => 2 }  );
+    $MessageBus->send( type => 'alert', payload => { a => 1, b => 2 }  );
 
 =cut
 
@@ -124,17 +124,17 @@ sub send {
     
     my $message;
     
-    if (ref($_[0]) eq "Net::MQ::Message") {
+    if (ref($_[0]) eq "Net::MessageBus::Message") {
         $message = $_[0];
     }
     elsif (ref($_[0]) eq "HASH") {
-        $message = Net::MQ::Message->new({ sender => $self->{sender},
+        $message = Net::MessageBus::Message->new({ sender => $self->{sender},
                                            group  => $self->{group},
                                            %{$_[0]},
                                          });
     }
     else {
-        $message = Net::MQ::Message->new({ sender => $self->{sender},
+        $message = Net::MessageBus::Message->new({ sender => $self->{sender},
                                            group  => $self->{group},
                                           @_,
                                          });
@@ -153,7 +153,7 @@ sub send_to_server {
     my $self = shift;
     my ($type,$object) = @_;
     
-    if (ref($object) eq "Net::MQ::Message") {
+    if (ref($object) eq "Net::MessageBus::Message") {
         $object = $object->serialize();
     }
     
@@ -235,7 +235,7 @@ sub read_server_messages {
             my $data = from_json($text);
             
             if (defined $data->{type} && $data->{type} eq 'message') {
-                push @{$self->{msgqueue}}, Net::MQ::Message->new($data->{payload});
+                push @{$self->{msgqueue}}, Net::MessageBus::Message->new($data->{payload});
             }
             else {
                 $self->{response} = $data;
@@ -245,12 +245,12 @@ sub read_server_messages {
     }
 }
 
-=head2 get_next_message
+=head2 next_message
 
     Returns the message in received from the server
     
 =cut
-sub get_next_message {
+sub next_message {
     my $self = shift;
     
     $self->read_server_messages();
@@ -259,12 +259,12 @@ sub get_next_message {
 }
 
 
-=head2 get_messages
+=head2 pending_messages
 
     Returns all the messages received until now from the server
     
 =cut
-sub get_messages {
+sub pending_messages {
     my $self = shift;
     
     my @messages = @{$self->{msgqueue}};
@@ -274,14 +274,26 @@ sub get_messages {
 }
 
 
+=head2 subscribe
+
+    Subscribes the current Net::MessageBus client to the messages from the specified category
+    
+=cut
+sub subscribe {
+    my $self = shift;
+    
+    return $self->send_to_server('subscribe',{ @_ } );
+}
+
+
 =head1 AUTHOR
 
 Horea Gligan, C<< <horea at gmail.com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-net-mq at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MQ>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-net-MessageBus at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MessageBus>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -291,7 +303,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Net::MQ
+    perldoc Net::MessageBus
 
 
 You can also look for information at:
@@ -300,19 +312,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MQ>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MessageBus>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Net-MQ>
+L<http://annocpan.org/dist/Net-MessageBus>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Net-MQ>
+L<http://cpanratings.perl.org/d/Net-MessageBus>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Net-MQ/>
+L<http://search.cpan.org/dist/Net-MessageBus/>
 
 =back
 
@@ -333,4 +345,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Net::MQ
+1; # End of Net::MessageBus

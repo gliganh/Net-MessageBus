@@ -1,4 +1,4 @@
-package Net::MQ::Base;
+package Net::MessageBus::Base;
 
 use 5.006;
 use strict;
@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MQ::Base - Base class for Net::MQ modules
+Net::MessageBus::Base - Base class for Net::MessageBus modules
 
 =head1 VERSION
 
@@ -57,8 +57,8 @@ Horea Gligan, C<< <horea at gmail.com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-net-mq at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MQ>.  I will be notified, and then you'll
+Please report any bugs or feature requests to C<bug-net-MessageBus at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-MessageBus>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
 
@@ -68,7 +68,7 @@ automatically be notified of progress on your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc Net::MQ
+    perldoc Net::MessageBus
 
 
 You can also look for information at:
@@ -77,19 +77,19 @@ You can also look for information at:
 
 =item * RT: CPAN's request tracker (report bugs here)
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MQ>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Net-MessageBus>
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/Net-MQ>
+L<http://annocpan.org/dist/Net-MessageBus>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/Net-MQ>
+L<http://cpanratings.perl.org/d/Net-MessageBus>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/Net-MQ/>
+L<http://search.cpan.org/dist/Net-MessageBus/>
 
 =back
 
@@ -110,4 +110,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Net::MQ::Base
+1; # End of Net::MessageBus::Base
