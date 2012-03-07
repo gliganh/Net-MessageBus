@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MessageBus::Server - The great new Net::MessageBus::Server!
+Net::MessageBus::Server - Pure Perl message bus server
 
 =head1 VERSION
 
@@ -32,20 +32,24 @@ Usage :
 
     use Net::MessageBus::Server;
 
-    my $MessageBus_server = Net::MessageBus::Server->new(
+    my $MBServer = Net::MessageBus::Server->new(
                         address => '127.0.0.1',
                         port    => '15000',
                         logger  => $logger,
                         authenticate => \&authenticate_method,
                     );
                     
-    $MessageBus_server->start();
+    $MBServer->start();
     
     or
     
-    $MessageBus_server->daemon() || die "Cannot run NetMessageBus in background!"
+    $MBServer->daemon() || die "Fork to start Net::MessageBus::Server in background failed!"
     ...
-    $MessageBus_server->stop(); #if started as a daemon.
+    if ( $MBServer->is_running() ) {
+        print "Server is alive";
+    }
+    ...
+    $MBServer->stop(); #if started as a daemon.
     
 
 =head1 SUBROUTINES/METHODS
@@ -57,26 +61,42 @@ Usage :
     start() method.
     
     Arguments :
-        address
-            The address on which the server should bind , 127.0.0.1 by dafault
+    
+=over 4
+
+=item * address = 
+    The address on which the server should bind , 127.0.0.1 by dafault
+
+=item * port =
+    The port on which the server should listen , 4500 by default
             
-        port
-            The port on which the server should listen , 4500 by default
+=item * logger
+    Any object that supports the fallowing methods : debug, info, warn,error
             
-        logger
-            Any object that supports the fallowing methods : debug, info, warn,
-            error
+=item * authenticate = 
+    A code ref to a method that returns true if the authentication is
+    successfull and false otherwise
+
+=back
+
+    B<Example>
+    
+    my $MBServer = Net::MessageBus::Server->new(
+                        address => '127.0.0.1',
+                        port    => '15000',
+                        logger  => $logger,
+                        authenticate => \&authenticate_method,
+                    );
+    
+
+    B<Example authentication method> :
+        sub authenticate_method {
+            my ($username, $password, $client_ip) = @_;
             
-        authenticate
-            A code ref to a method that returns true if the authentication is
-            successfull and false otherwise
-            Example :
-                sub authenticate_method {
-                    my ($username, $password) = @_;
-                    
-                    return 1 if ($username eq "john" && $password eq "1234");
-                    return 0;
-                }
+            return 1 if ($username eq "john" && $password eq "1234");
+            return 0;
+        }
+
 
 =cut
 sub new {
@@ -110,31 +130,6 @@ sub new {
     return $self;
 }
 
-=head2 create_server_socket
-
-    Starts the TCP socket that to which the clients will connect
-
-=cut
-
-sub create_server_socket {
-    my $self = shift;
-    
-    my $server_sock= IO::Socket::INET->new(
-                                LocalHost => $self->{address},
-                                LocalPort => $self->{port},
-                                Proto     => 'tcp',
-                                Listen    => 10,
-                                ReuseAddr => 1,
-                                Blocking  => 1,
-                    ) || die "Cannot listen on ".$self->{address}.
-                              ":".$self->{port}.", Error: $!";
-                              
-    $self->logger->info("$0  server v$VERSION - Listening on ".
-                  $self->{address}.":".$self->{port} );                              
-    
-    return $server_sock;
-    
-}
 
 =head2 start
 
@@ -324,7 +319,7 @@ sub stop {
 
 =head2 is_running
 
-    Stops a previously started daemon
+    Returns true if the server process is running
     
 =cut
 sub is_running {
@@ -336,6 +331,35 @@ sub is_running {
     
     return 1;
 }
+
+=head1 Private methods
+
+=head2 create_server_socket
+
+    Starts the TCP socket that to which the clients will connect
+
+=cut
+
+sub create_server_socket {
+    my $self = shift;
+    
+    my $server_sock= IO::Socket::INET->new(
+                                LocalHost => $self->{address},
+                                LocalPort => $self->{port},
+                                Proto     => 'tcp',
+                                Listen    => 10,
+                                ReuseAddr => 1,
+                                Blocking  => 1,
+                    ) || die "Cannot listen on ".$self->{address}.
+                              ":".$self->{port}.", Error: $!";
+                              
+    $self->logger->info("$0  server v$VERSION - Listening on ".
+                  $self->{address}.":".$self->{port} );                              
+    
+    return $server_sock;
+    
+}
+
 
 =head2 get_peer_address
 
@@ -447,7 +471,7 @@ sub send_message {
 
 =head1 AUTHOR
 
-Horea Gligan, C<< <horea at gmail.com> >>
+Horea Gligan, C<< <gliganh at gmail.com> >>
 
 =head1 BUGS
 

@@ -23,25 +23,49 @@ __PACKAGE__->mk_ro_accessors(qw(type group sender payload));
 
 =head1 SYNOPSIS
 
-This module implements a pure perl message queue that aloows
+This module implements a pure perl message bus message object
 
-Perhaps a little code snippet.
+Example :
 
     use Net::MessageBus::Message;
 
-    my $foo = Net::MessageBus::Message->new();
+    my $foo = Net::MessageBus::Message->new(
+                            type => 'event',
+                            payload => { some => 'complex strcture' },
+                            sender => 'script1',
+                            group => 'backend',
+            );
     ...
 
-=head1 EXPORT
-
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
 
 =head2 new
 
     Creates a new Net::MessageBus::Message object
+    
+    B<Arguments>
+
+=over
+
+=item * type = A type assigned to the message
+
+=item * payload = A complex perl structure / scalar but it cannot contain any objects
+
+=item * sender = the name of the Net::MessageBus client that is sending the message
+
+=item * group = the group to which this message belongs
+
+=back
+
+    B<Example> :
+    
+    my $foo = Net::MessageBus::Message->new(
+                            type => 'event',
+                            payload => { some => 'complex strcture' },
+                            sender => 'script1',
+                            group => 'backend',
+            );
 
 =cut
 
@@ -54,7 +78,44 @@ sub new {
     return $self;
 }
 
+=head2 type
+
+    Returns the type of the message
+    
+    B<Example> :
+    
+        my $type = $Message->type();
+        
+=head2 sender
+
+    Returns the sender of the message
+    
+    B<Example> :
+    
+        my $type = $Message->sender();
+        
+=head2 group
+
+    Returns the group of the message
+    
+    B<Example> :
+    
+        my $type = $Message->group();
+        
+=head2 payload
+
+    Returns the payload of the message 
+    
+    B<Example> :
+    
+        my $type = $Message->payload();        
+
+
+=head1 Private methods
+
 =head2 serialize
+
+    Serializes the message for transport
 
 =cut
 
@@ -71,7 +132,7 @@ sub serialize {
 
 =head1 AUTHOR
 
-Horea Gligan, C<< <horea at gmail.com> >>
+Horea Gligan, C<< <gliganh at gmail.com> >>
 
 =head1 BUGS
 

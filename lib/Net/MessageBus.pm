@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-Net::MessageBus - Pure Perl simple message queue
+Net::MessageBus - Pure Perl simple message bus
 
 =head1 VERSION
 
@@ -26,9 +26,50 @@ use JSON;
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+This module implements the client side of the Message Bus.
 
-Perhaps a little code snippet.
+    use Net::MessageBus;
+    my $MessageBus = Net::MessageBus->new(
+                        server => '127.0.0.1',
+                        group => 'backend',
+                        sender => 'machine1',
+                        username => 'user',
+                        password => 'password',
+                        logger  => $logger_object,
+                    );
+
+On initialization the client authenticates with the Net::MessageBus::Server
+after which it can start pushing messages to the bus.
+
+In order to receive any messages from the bus the client must subscribe to :
+    - one or more groups
+    - one or more senders
+    - all messages
+    
+    #each can be called multiple times
+    $MessageBus->subscribe(group => 'test');
+    $MessageBus->subscribe(sender => 'test_process_1');
+    
+    or
+    
+    $MessageBus->subscribe_to_all();
+    
+The client can unsubscribe at any time by calling the C<unsubscribe> method
+
+    $MessageBus->unsubscribe();
+    
+    
+To retrive the messages received from the bus, the client can call one of this
+methods :
+
+    my @messages = $MessageBus->pending_messages();
+    
+    or
+    
+    my $message = $MessageBus->next_message();
+    
+
+=head1 EXAMPLE
 
     use Net::MessageBus;
 
@@ -45,7 +86,7 @@ Perhaps a little code snippet.
     my @messages = $MessageBus->pending_messages();
     or
     while (my $message = $MessageBus->next_message()) {
-        ...
+        print $message->type();
     }
 
 =head1 SUBROUTINES/METHODS
@@ -53,6 +94,37 @@ Perhaps a little code snippet.
 =head2 new
 
     Creates a new New::MessageBus object
+    
+    B<Arguments>
+
+=over 10
+
+=item * server = The ip address of the server    
+
+=item * port = The port on which the server is listening for connections
+
+=item * group =  The group to which this client belogs to
+
+=item * sender = A name for the current client
+
+=item * username = User name that will be sent to the server for authentication
+
+=item * password = The password that will be sent to the server for authentication
+
+=item * logger = A object on which we can call the fallowing methods C<debug,info,warn,error>
+
+=back
+
+    B<Example>
+
+        my $MessageBus = Net::MessageBus->new(
+                            server => '127.0.0.1',
+                            group => 'backend',
+                            sender => 'machine1',
+                            username => 'user',
+                            password => 'password',
+                            logger  => $logger_object,
+                        );    
 
 =cut
 sub new {
@@ -84,38 +156,42 @@ sub new {
     return $self;
 }
 
-=head2 connect_to_server
 
-   Creates a connection to the Net::MessageBus server 
+=head2 subscribe
 
+    Subscribes the current Net::MessageBus client to the messages from the
+    specified category. It can be called multiple times
+    
+    B<Example> :
+    
+        $MessageBus->subscribe(group => 'test');
+        or 
+        $MessageBus->subscribe(sender => 'test_process_1');
+    
 =cut
-
-sub connect_to_server {
+sub subscribe {
     my $self = shift;
     
-    $self->{server_socket} = IO::Socket::INET->new(
-                                PeerHost => $self->{server_address},
-                                PeerPort => $self->{server_port},
-                                Proto    => 'tcp',
-								Timeout  => 1,
-	                            ReuseAddr => 1,
-                                Blocking  => 1,
-								) || die "Cannot connect to Net::MessageBus server";
-    
-    $self->{server_sel} = IO::Select->new($self->{server_socket});
-    
-    $self->authenticate() || die "Authentication failed";
+    return $self->send_to_server('subscribe',{ @_ } );
 }
+
 
 =head2 send
 
-    Send a new messge to the message queue
+    Send a new messge to the message queue.
+    It has two forms in which it can be called :
+        1. With a Net::MessageBus::Message object as argument
+        2. With a hash ref containing the fallowing two keys :
+            - type = The message type
+            - payload = The actual information we want to send with the message.
+                        It can be a scalar, array ref or hash ref and it cannot
+                        contain any objects
     
-    Usage :
+    B<Example> :
     
-    $MessageBus->send( $message );
-    or
-    $MessageBus->send( type => 'alert', payload => { a => 1, b => 2 }  );
+        $MessageBus->send( $message ); #message must be a Net::MessageBus::Message object
+        or
+        $MessageBus->send( type => 'alert', payload => { a => 1, b => 2 }  );
 
 =cut
 
@@ -144,9 +220,69 @@ sub send {
 }
 
 
+=head2 next_message
+
+    Returns the next message from the queue of messages we received from the
+    server. The message is a Net::MessageBus::Message object.
+    
+=cut
+sub next_message {
+    my $self = shift;
+    
+    $self->read_server_messages();
+    
+    return shift @{$self->{msgqueue}};
+}
+
+
+=head2 pending_messages
+
+    Returns all the messages received until now from the server. Each message is
+    a Net::MessageBus::Message object.
+    
+=cut
+sub pending_messages {
+    my $self = shift;
+    
+    my @messages = @{$self->{msgqueue}};
+    $self->{msgqueue} = [];
+    
+    return @messages;
+}
+
+
+=head1 Private methods
+
+B<This methods are for internal use and should not be called manually>
+
+=head2 connect_to_server
+
+   Creates a connection to the Net::MessageBus server and authenticates the user
+
+=cut
+
+sub connect_to_server {
+    my $self = shift;
+    
+    $self->{server_socket} = IO::Socket::INET->new(
+                                PeerHost => $self->{server_address},
+                                PeerPort => $self->{server_port},
+                                Proto    => 'tcp',
+								Timeout  => 1,
+	                            ReuseAddr => 1,
+                                Blocking  => 1,
+								) || die "Cannot connect to Net::MessageBus server";
+    
+    $self->{server_sel} = IO::Select->new($self->{server_socket});
+    
+    $self->authenticate() || die "Authentication failed";
+}
+
+
+
 =head2 send_to_server
 
-    Sends the given message to the server
+    Handles the actual comunication with the server
 
 =cut
 sub send_to_server {
@@ -184,7 +320,7 @@ sub send_to_server {
 
 =head2 authenticate
 
-    Sends a authenication request to the server
+    Sends a authenication request to the server and waits for the response
     
 =cut
 sub authenticate {
@@ -216,7 +352,8 @@ sub get_response {
 
 =head2 read_server_messages
 
-    Reads all the messages received from the server and adds the to the message list
+    Reads all the messages received from the server and adds the to the internal
+    message queue
 
 =cut
 sub read_server_messages {
@@ -245,50 +382,12 @@ sub read_server_messages {
     }
 }
 
-=head2 next_message
 
-    Returns the message in received from the server
-    
-=cut
-sub next_message {
-    my $self = shift;
-    
-    $self->read_server_messages();
-    
-    return shift @{$self->{msgqueue}};
-}
-
-
-=head2 pending_messages
-
-    Returns all the messages received until now from the server
-    
-=cut
-sub pending_messages {
-    my $self = shift;
-    
-    my @messages = @{$self->{msgqueue}};
-    $self->{msgqueue} = [];
-    
-    return @messages;
-}
-
-
-=head2 subscribe
-
-    Subscribes the current Net::MessageBus client to the messages from the specified category
-    
-=cut
-sub subscribe {
-    my $self = shift;
-    
-    return $self->send_to_server('subscribe',{ @_ } );
-}
 
 
 =head1 AUTHOR
 
-Horea Gligan, C<< <horea at gmail.com> >>
+Horea Gligan, C<< <gliganh at gmail.com> >>
 
 =head1 BUGS
 

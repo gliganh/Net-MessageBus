@@ -53,7 +53,7 @@ sub create_default_logger {
 
 =head1 AUTHOR
 
-Horea Gligan, C<< <horea at gmail.com> >>
+Horea Gligan, C<< <gliganh at gmail.com> >>
 
 =head1 BUGS
 
