@@ -10,11 +10,11 @@ Net::MessageBus - Pure Perl simple message bus
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base 'Net::MessageBus::Base';
 
@@ -23,6 +23,8 @@ use Net::MessageBus::Message;
 use IO::Socket::INET;
 use IO::Select;
 use JSON;
+
+$| = 1;
 
 =head1 SYNOPSIS
 
@@ -147,6 +149,7 @@ sub new {
                 username       => $params{username},
                 password       => $params{password},
                 msgqueue       => [],
+                buffer         => '',
                 };
     
     bless $self, __PACKAGE__;
@@ -243,6 +246,8 @@ sub next_message {
 =cut
 sub pending_messages {
     my $self = shift;
+    
+    $self->read_server_messages();
     
     my @messages = @{$self->{msgqueue}};
     $self->{msgqueue} = [];
@@ -359,18 +364,27 @@ sub get_response {
 sub read_server_messages {
     my $self = shift;
     
-    my @ready;
-    
     local $/ = "\n";
-     
-    while ( @ready = $self->{server_sel}->can_read(0.01) ) {   
+    local $\ = "\n";
     
-        foreach my $fh (@ready) {
-            my $text = readline $fh;
+    while ( 1 ) {
+        
+        my @ready = $self->{server_sel}->can_read(0.01);
+        last unless scalar(@ready);
+        
+        my $buffer;
+        sysread($ready[0],$buffer,8192);
+        
+        $self->{buffer} .= $buffer;
+        
+        while ( $self->{buffer} =~ s/(.*?\n)// ) {
+        
+            my $text = $1;
+
             chomp $text;
             
             my $data = from_json($text);
-            
+        
             if (defined $data->{type} && $data->{type} eq 'message') {
                 push @{$self->{msgqueue}}, Net::MessageBus::Message->new($data->{payload});
             }
