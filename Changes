@@ -2,4 +2,7 @@ Revision history for Net-MessageBus
 
 0.01    2012-03-07
         First version
-
+0.02    2012-03-08
+        Fixed problems when readin large ammounts of messages from the server
+        Added more tests
+        Better logging
