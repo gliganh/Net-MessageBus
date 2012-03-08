@@ -14,6 +14,10 @@ WriteMakefile(
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,
+        'JSON'       => 0,
+        'IO::Select' => 0,
+        'IO::Socket::INET' => 0,
+        'Log::Log4perl' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Net-MessageBus-*' },
