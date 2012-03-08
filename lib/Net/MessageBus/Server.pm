@@ -10,11 +10,11 @@ Net::MessageBus::Server - Pure Perl message bus server
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use base qw(Net::MessageBus::Base);
 
@@ -23,6 +23,8 @@ use IO::Socket::INET;
 
 #handle gracefully the death of child ssh processes
 use POSIX ":sys_wait_h";
+
+$| = 1;
 
 =head1 SYNOPSIS
 
@@ -466,6 +468,9 @@ sub send_message {
         eval {
             print $client to_json({ type => 'message' , payload => $message->serialize() });
         };
+        if ($@) {
+            $self->logger->error('Error sending message to client!');
+        }
     }
 }
 

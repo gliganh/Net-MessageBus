@@ -10,7 +10,7 @@ Net::MessageBus::Base - Base class for Net::MessageBus modules
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
