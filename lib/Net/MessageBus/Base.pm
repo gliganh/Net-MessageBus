@@ -10,9 +10,11 @@ Net::MessageBus::Base - Base class for Net::MessageBus modules
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
+
+our $VERSION = '0.03';
 
 =head1 SUBROUTINES/METHODS
 
