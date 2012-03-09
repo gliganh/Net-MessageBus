@@ -20,7 +20,7 @@ our $VERSION = '0.03';
 
 =head2 logger
 
-    Getter / Setter for the logging object
+Getter / Setter for the logging object
 
 =cut
 sub logger {
@@ -34,7 +34,7 @@ sub logger {
 
 =head2 create_default_logger
 
-    Creates the default logger that will be used
+Creates the default logger that will be used
     
 =cut
 sub create_default_logger {

@@ -44,9 +44,15 @@ On initialization the client authenticates with the Net::MessageBus::Server
 after which it can start pushing messages to the bus.
 
 In order to receive any messages from the bus the client must subscribe to :
-    - one or more groups
-    - one or more senders
-    - all messages
+=over 4
+
+=item * one or more groups
+
+=item * one or more senders
+
+=item * all messages
+
+=back
     
     #each can be called multiple times
     $MessageBus->subscribe(group => 'test');
@@ -95,9 +101,9 @@ methods :
 
 =head2 new
 
-    Creates a new New::MessageBus object
+Creates a new New::MessageBus object
     
-    B<Arguments>
+B<Arguments>
 
 =over 10
 
@@ -117,16 +123,16 @@ methods :
 
 =back
 
-    B<Example>
+B<Example>
 
-        my $MessageBus = Net::MessageBus->new(
-                            server => '127.0.0.1',
-                            group => 'backend',
-                            sender => 'machine1',
-                            username => 'user',
-                            password => 'password',
-                            logger  => $logger_object,
-                        );    
+    my $MessageBus = Net::MessageBus->new(
+                        server => '127.0.0.1',
+                        group => 'backend',
+                        sender => 'machine1',
+                        username => 'user',
+                        password => 'password',
+                        logger  => $logger_object,
+                    );    
 
 =cut
 sub new {
@@ -162,14 +168,14 @@ sub new {
 
 =head2 subscribe
 
-    Subscribes the current Net::MessageBus client to the messages from the
-    specified category. It can be called multiple times
-    
-    B<Example> :
-    
-        $MessageBus->subscribe(group => 'test');
-        or 
-        $MessageBus->subscribe(sender => 'test_process_1');
+Subscribes the current Net::MessageBus client to the messages from the
+specified category. It can be called multiple times
+
+B<Example> :
+
+    $MessageBus->subscribe(group => 'test');
+    or 
+    $MessageBus->subscribe(sender => 'test_process_1');
     
 =cut
 sub subscribe {
@@ -181,20 +187,32 @@ sub subscribe {
 
 =head2 send
 
-    Send a new messge to the message queue.
-    It has two forms in which it can be called :
-        1. With a Net::MessageBus::Message object as argument
-        2. With a hash ref containing the fallowing two keys :
-            - type = The message type
-            - payload = The actual information we want to send with the message.
-                        It can be a scalar, array ref or hash ref and it cannot
-                        contain any objects
-    
-    B<Example> :
-    
-        $MessageBus->send( $message ); #message must be a Net::MessageBus::Message object
-        or
-        $MessageBus->send( type => 'alert', payload => { a => 1, b => 2 }  );
+Send a new messge to the message queue.
+It has two forms in which it can be called :
+
+=over 4
+
+=item 1. With a Net::MessageBus::Message object as argument
+
+=item 2. With a hash ref containing the fallowing two keys :
+
+=back
+
+=over 8
+        
+=item * type = The message type
+
+=item * payload = The actual information we want to send with the message.
+                  It can be a scalar, array ref or hash ref and it cannot
+                  contain any objects
+
+=back
+
+B<Example> :
+
+    $MessageBus->send( $message ); #message must be a Net::MessageBus::Message object
+    or
+    $MessageBus->send( type => 'alert', payload => { a => 1, b => 2 }  );
 
 =cut
 
@@ -225,8 +243,8 @@ sub send {
 
 =head2 next_message
 
-    Returns the next message from the queue of messages we received from the
-    server. The message is a Net::MessageBus::Message object.
+Returns the next message from the queue of messages we received from the
+server. The message is a Net::MessageBus::Message object.
     
 =cut
 sub next_message {
@@ -240,8 +258,8 @@ sub next_message {
 
 =head2 pending_messages
 
-    Returns all the messages received until now from the server. Each message is
-    a Net::MessageBus::Message object.
+Returns all the messages received until now from the server. Each message is
+a Net::MessageBus::Message object.
     
 =cut
 sub pending_messages {
@@ -262,7 +280,7 @@ B<This methods are for internal use and should not be called manually>
 
 =head2 connect_to_server
 
-   Creates a connection to the Net::MessageBus server and authenticates the user
+Creates a connection to the Net::MessageBus server and authenticates the user
 
 =cut
 
@@ -287,7 +305,7 @@ sub connect_to_server {
 
 =head2 send_to_server
 
-    Handles the actual comunication with the server
+Handles the actual comunication with the server
 
 =cut
 sub send_to_server {
@@ -325,7 +343,7 @@ sub send_to_server {
 
 =head2 authenticate
 
-    Sends a authenication request to the server and waits for the response
+Sends a authenication request to the server and waits for the response
     
 =cut
 sub authenticate {
@@ -341,7 +359,7 @@ sub authenticate {
 
 =head2 get_response
 
-    Returns the response received from the server for the last request
+Returns the response received from the server for the last request
 
 =cut
 sub get_response {
@@ -357,8 +375,8 @@ sub get_response {
 
 =head2 read_server_messages
 
-    Reads all the messages received from the server and adds the to the internal
-    message queue
+Reads all the messages received from the server and adds the to the internal
+message queue
 
 =cut
 sub read_server_messages {

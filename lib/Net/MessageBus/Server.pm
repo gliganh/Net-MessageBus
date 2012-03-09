@@ -58,11 +58,11 @@ Usage :
 
 =head2 new
 
-    Creates a new server object.
-    It does not automatically start the server, you have to start it using the
-    start() method.
+Creates a new server object.
+It does not automatically start the server, you have to start it using the
+start() method.
     
-    Arguments :
+Arguments :
     
 =over 4
 
@@ -81,7 +81,7 @@ Usage :
 
 =back
 
-    B<Example>
+B<Example>
     
     my $MBServer = Net::MessageBus::Server->new(
                         address => '127.0.0.1',
@@ -91,13 +91,14 @@ Usage :
                     );
     
 
-    B<Example authentication method> :
-        sub authenticate_method {
-            my ($username, $password, $client_ip) = @_;
-            
-            return 1 if ($username eq "john" && $password eq "1234");
-            return 0;
-        }
+B<Example authentication method> :
+
+    sub authenticate_method {
+        my ($username, $password, $client_ip) = @_;
+        
+        return 1 if ($username eq "john" && $password eq "1234");
+        return 0;
+    }
 
 
 =cut
@@ -253,7 +254,7 @@ sub start {
 
 =head2 daemon
 
-    Starts the server in background
+Starts the server in background
 
 =cut
 sub daemon {
@@ -293,7 +294,7 @@ sub daemon {
 
 =head2 stop
 
-    Stops a previously started daemon
+Stops a previously started daemon
     
 =cut
 sub stop {
@@ -321,7 +322,7 @@ sub stop {
 
 =head2 is_running
 
-    Returns true if the server process is running
+Returns true if the server process is running
     
 =cut
 sub is_running {
@@ -338,7 +339,7 @@ sub is_running {
 
 =head2 create_server_socket
 
-    Starts the TCP socket that to which the clients will connect
+Starts the TCP socket that to which the clients will connect
 
 =cut
 
@@ -365,7 +366,7 @@ sub create_server_socket {
 
 =head2 get_peer_address
 
-    Returns the ip address for the given connection
+Returns the ip address for the given connection
     
 =cut    
 sub get_peer_address {
@@ -381,7 +382,7 @@ sub get_peer_address {
 
 =head2 subscribe_client
 
-    Adds the client to the subscription list which he specified
+Adds the client to the subscription list which he specified
     
 =cut
 sub subscribe_client {
@@ -413,7 +414,7 @@ sub subscribe_client {
 
 =head2 unsubscribe_client
 
-    Removes the given socket from all subscription lists
+Removes the given socket from all subscription lists
     
 =cut
 sub unsubscribe_client {
@@ -431,7 +432,7 @@ sub unsubscribe_client {
 
 =head2 clients_registered_for_message 
 
-    Returns a list containing all the file handles registered to receive the given message
+Returns a list containing all the file handles registered to receive the given message
 
 =cut
 sub clients_registered_for_message {
@@ -453,7 +454,7 @@ sub clients_registered_for_message {
 
 =head2 send_message
 
-    Sends the given message to the clients that subscribed to the group or sender of the messages
+Sends the given message to the clients that subscribed to the group or sender of the messages
 
 =cut
 sub send_message {
