@@ -44,6 +44,7 @@ On initialization the client authenticates with the Net::MessageBus::Server
 after which it can start pushing messages to the bus.
 
 In order to receive any messages from the bus the client must subscribe to :
+
 =over 4
 
 =item * one or more groups
@@ -158,7 +159,7 @@ sub new {
                 buffer         => '',
                 };
     
-    bless $self, __PACKAGE__;
+    bless $self, $class;
     
     $self->connect_to_server();
     

@@ -128,7 +128,7 @@ sub new {
     
     $self->{authenticated} = {};
     
-    bless $self, __PACKAGE__;
+    bless $self, $class;
     
     return $self;
 }
