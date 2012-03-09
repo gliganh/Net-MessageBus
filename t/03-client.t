@@ -3,7 +3,7 @@
 use 5.006;
 use strict;
 use warnings;
-use Test::More tests => 618;
+use Test::More tests => 622;
 
 use Net::MessageBus;
 use Net::MessageBus::Server;
@@ -135,6 +135,32 @@ is_deeply(\@messages, [], 'no messages received yet');
  
 }
 
+
+{ #send / receive tests (big message)
+ 
+ my $MessageBus1 = Net::MessageBus->new(sender => 'test1',group => 'test_group');
+ my $MessageBus2 = Net::MessageBus->new(sender => 'test2',group => 'test_group');
+ 
+ $MessageBus2->subscribe(sender => 'test1');
+ 
+ my $test_data = <<END;
+ asdf df 43q
+ et
+ ăâşţț’„”»«»––
+END
+ 
+ ok($MessageBus1->send(type => 'test',payload => $test_data),'Message sent');
+ 
+ my $message; my $count = 5;
+ while (! ($message = $MessageBus2->next_message()) && $count-- ) {
+    sleep 1;
+ }
+ 
+ isa_ok($message,'Net::MessageBus::Message');
+ is($message->type,'test','Message type ok');
+ is($message->payload,$test_data,'Message payload ok');
+ 
+}
 
 $server->stop();
 
