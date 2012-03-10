@@ -13,3 +13,6 @@ Revision history for Net-MessageBus
 0.04	2012-03-10
 		Added missing module dependecy to the Server module
 		More POD fixes
+0.05	2012-03-10
+		Added subscribe_all and unsubscribe functionality to the client
+		Small fixes to the tests
