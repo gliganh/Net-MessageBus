@@ -19,6 +19,7 @@ our $VERSION = '0.03';
 use base qw(Net::MessageBus::Base);
 
 use JSON;
+use IO::Select;
 use IO::Socket::INET;
 
 #handle gracefully the death of child ssh processes
