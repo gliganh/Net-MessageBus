@@ -3,7 +3,7 @@
 use 5.006;
 use strict;
 use warnings;
-use Test::More tests => 622;
+use Test::More tests => 631;
 
 use Net::MessageBus;
 use Net::MessageBus::Server;
@@ -14,6 +14,8 @@ use Net::MessageBus::Server;
 
 my $server = Net::MessageBus::Server->new();
 $server->daemon();
+
+sleep 1;#give the server some time to start
 
 ok($server->is_running(),'Server running');
 
@@ -95,13 +97,6 @@ is_deeply(\@messages, [], 'no messages received yet');
  is(scalar(@messages),100,'Client 2 received 100 messages');
  is(scalar(@messages2),100,'Client 3 received 100 messages');
  
- #my $count = 1;
- #foreach (1..100) {
- #   my $message = $MessageBus2->next_message();
- #   isa_ok($message,'Net::MessageBus::Message',"Message $_");
- #   is($message->payload,$_,"Message $_ in expected order");
- #}
- 
 }
 
 
@@ -159,6 +154,45 @@ END
  isa_ok($message,'Net::MessageBus::Message');
  is($message->type,'test','Message type ok');
  is($message->payload,$test_data,'Message payload ok');
+ 
+}
+
+{ #send / receive tests (subscribe_all)
+ 
+ my $MessageBus1 = Net::MessageBus->new(sender => 'test1',group => 'test_group');
+ my $MessageBus2 = Net::MessageBus->new(sender => 'test2',group => 'test_group');
+ 
+ ok($MessageBus2->subscribe_all(),'Subscribe_all works');
+ 
+ ok($MessageBus1->send(type => 'test',payload => 123),'Message sent');
+ 
+ my $message; my $count = 5;
+ while (! ($message = $MessageBus2->next_message()) && $count-- ) {
+    sleep 1;
+ }
+ 
+ isa_ok($message,'Net::MessageBus::Message');
+ is($message->type,'test','Message type ok');
+ is($message->payload,123,'Message payload ok');
+ 
+}
+
+{ #send / receive tests (unsubscribe)
+ 
+ my $MessageBus1 = Net::MessageBus->new(sender => 'test1',group => 'test_group');
+ my $MessageBus2 = Net::MessageBus->new(sender => 'test2',group => 'test_group');
+ 
+ ok($MessageBus2->subscribe_all(),"Subscribe_all request accepted");
+ ok($MessageBus2->unsubscribe(),"Unsubscribe request accepted");
+ 
+ ok($MessageBus1->send(type => 'test',payload => 123),'Message sent');
+ 
+ my $message; my $count = 3;
+ while (! ($message = $MessageBus2->next_message()) && $count-- ) {
+    sleep 1;
+ }
+ 
+ isnt(defined $message,'No message received');
  
 }
 
