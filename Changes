@@ -10,3 +10,6 @@ Revision history for Net-MessageBus
         Added missing tests to the test suite
         Updated dependecies list
         Added UTF8 tests
+0.04	2012-03-10
+		Added missing module dependecy to the Server module
+		More POD fixes
