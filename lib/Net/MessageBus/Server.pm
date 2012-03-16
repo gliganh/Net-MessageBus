@@ -10,15 +10,16 @@ Net::MessageBus::Server - Pure Perl message bus server
 
 =head1 VERSION
 
-Version 0.03
+Version 0.06
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.06';
 
 use base qw(Net::MessageBus::Base);
 
 use JSON;
+use IO::Select;
 use IO::Socket::INET;
 
 use Net::MessageBus::Message;
@@ -307,7 +308,13 @@ sub stop {
         return 0;
     }
     
-    kill 15, $self->{pid};
+	if ($^O =~ /Win/i ) { 
+		#signal 15 not delivered while in IO wait on Windows so we have to take drastic measures
+		kill 9, $self->{pid};
+	}
+	else {
+    	kill 15, $self->{pid};
+	}
     
     sleep 1;
         
