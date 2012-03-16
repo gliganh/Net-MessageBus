@@ -250,8 +250,11 @@ server. The message is a Net::MessageBus::Message object.
 =cut
 sub next_message {
     my $self = shift;
+    my %params = @_;
     
-    $self->read_server_messages();
+    if (! scalar(@{$self->{msgqueue}})) {
+        $self->read_server_messages();
+    }
     
     return shift @{$self->{msgqueue}};
 }
@@ -261,12 +264,21 @@ sub next_message {
 
 Returns all the messages received until now from the server. Each message is
 a Net::MessageBus::Message object.
+
+Argumens :
+
+=over 4
+
+=item * force_read_queue = forces a read of 
     
 =cut
 sub pending_messages {
     my $self = shift;
+    my %params = @_;
     
-    $self->read_server_messages();
+    if (! scalar(@{$self->{msgqueue}}) || $params{force_read_queue} ) {
+        $self->read_server_messages();
+    }
     
     my @messages = @{$self->{msgqueue}};
     $self->{msgqueue} = [];
@@ -388,30 +400,39 @@ sub read_server_messages {
     
     while ( 1 ) {
         
-        my @ready = $self->{server_sel}->can_read(0.01);
+        my @ready = $self->{server_sel}->can_read( $self->{blocking} ? 0 : ($self->{timeout} || 0.01) );
         last unless scalar(@ready);
         
         my $buffer;
-        sysread($ready[0],$buffer,8192);
         
-        $self->{buffer} .= $buffer;
+        if ( sysread($ready[0],$buffer,8192) {
         
-        while ( $self->{buffer} =~ s/(.*?\n)// ) {
-        
-            my $text = $1;
-
-            chomp $text;
+            $self->{buffer} .= $buffer;
             
-            my $data = from_json($text);
-        
-            if (defined $data->{type} && $data->{type} eq 'message') {
-                push @{$self->{msgqueue}}, Net::MessageBus::Message->new($data->{payload});
-            }
-            else {
-                $self->{response} = $data;
+            while ( $self->{buffer} =~ s/(.*?\n)// ) {
+            
+                my $text = $1;
+    
+                chomp $text;
+                
+                my $data = from_json($text);
+            
+                if (defined $data->{type} && $data->{type} eq 'message') {
+                    push @{$self->{msgqueue}}, Net::MessageBus::Message->new($data->{payload});
+                }
+                else {
+                    $self->{response} = $data;
+                }
             }
         }
-        
+        else {
+            if ($self->{auto_reconnect}) {
+                $self->connect_to_server();
+            }
+            else {
+                die "Net::MessageBus server closed the connection";
+            }
+        }
     }
 }
 

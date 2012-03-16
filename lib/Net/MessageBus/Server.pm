@@ -21,6 +21,8 @@ use base qw(Net::MessageBus::Base);
 use JSON;
 use IO::Socket::INET;
 
+use Net::MessageBus::Message;
+
 #handle gracefully the death of child ssh processes
 use POSIX ":sys_wait_h";
 
