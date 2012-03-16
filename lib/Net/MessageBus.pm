@@ -1,4 +1,4 @@
-package Net::MessageBus;
+	package Net::MessageBus;
 
 use 5.006;
 use strict;
@@ -38,6 +38,8 @@ This module implements the client side of the Message Bus.
                         username => 'user',
                         password => 'password',
                         logger  => $logger_object,
+						block => 0,
+						timeout => 0.01
                     );
 
 On initialization the client authenticates with the Net::MessageBus::Server
@@ -122,6 +124,13 @@ B<Arguments>
 
 =item * logger = A object on which we can call the fallowing methods C<debug,info,warn,error>
 
+=item * block = Sets the read timout to 0 which means that the if we don't have any unread 
+messages from the server we will wait until the server sends something. If I<block> is true 
+I<timeout> will be ignored.
+
+=item * timeout = the maximum ammount of time we should wait for a message from the server
+before returning C<undef> for C<next_message()> or an empty list for C<pending_messages()>
+
 =back
 
 B<Example>
@@ -155,6 +164,8 @@ sub new {
                 sender         => $params{sender},
                 username       => $params{username},
                 password       => $params{password},
+				timeout		   => defined($params{timeout}) ? $params{timeout} : 0.01,
+				blocking	   => defined($params{blocking}) ? $params{blocking} : 1,
                 msgqueue       => [],
                 buffer         => '',
                 };
@@ -302,7 +313,13 @@ Argumens :
 
 =over 4
 
-=item * force_read_queue = forces a read of 
+=item * force_read_queue = forces a read of everyting the server might have sent 
+and we have't processed yet
+						 
+Note: Forcing a read of the message queue when I<block> mode is on will block the 
+call until we received something from the server
+
+=back
     
 =cut
 sub pending_messages {
@@ -318,6 +335,53 @@ sub pending_messages {
     
     return @messages;
 }
+
+
+
+=head2 blocking
+
+Getter/Setter for the I<blocking> setting of the client. If set to true, when waiting for server 
+messages, the client will block until it receives something
+
+Examples :
+	my $blocking = $MessageBus->blocking();
+	or 
+	$MessageBus->blocking(1);
+	
+=cut
+sub blocking {
+	my $self = shift;
+	
+	if (defined $_[0]) {
+		$self->{blocking} = !!$_[0];
+	}
+	return $self->{blocking};
+}
+
+=head2 timeout
+
+Getter/Setter for the timeout when waiting for server messages.
+It can have subunitary value (eg. 0.01).
+
+I<Note1> : When I<blocking> is set to a true value, the timeout is ignored
+I<Note2> : When I<timeout> is set to 0 the effect is the same as setting I<blocking> to a true value.
+
+Example :
+	my $timeout = $MessageBus->timeout();
+	or 
+	$MessageBus->timeout(0.01);
+	
+=cut
+sub timeout {
+	my $self = shift;
+	
+	if (defined $_[0]) {
+		die "Invalid timeout specified" unless $_[0] =~ /^\d+(?:\.\d+)?$/;
+		$self->{timeout} = $_[0];
+	}
+	return $self->{timeout};
+}
+
 
 
 =head1 Private methods
@@ -438,7 +502,7 @@ sub read_server_messages {
         
         my $buffer;
         
-        if ( sysread($ready[0],$buffer,8192) {
+        if ( sysread($ready[0],$buffer,8192) ) {
         
             $self->{buffer} .= $buffer;
             

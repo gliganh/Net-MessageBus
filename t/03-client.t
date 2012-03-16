@@ -3,7 +3,7 @@
 use 5.006;
 use strict;
 use warnings;
-use Test::More tests => 631;
+use Test::More tests => 635;
 
 use Net::MessageBus;
 use Net::MessageBus::Server;
@@ -194,6 +194,18 @@ END
  
  isnt(defined $message,'No message received');
  
+}
+
+{ 
+	my $MessageBus = Net::MessageBus->new(timeout => 0.01, blocking => 0);
+	is($MessageBus->timeout(),0.01,"Timeout set correctly");
+	is($MessageBus->blocking(),0,"Blocking set correctly");
+	
+	$MessageBus->timeout(1);
+	$MessageBus->blocking('true');
+	
+	is($MessageBus->timeout(),1,"Timeout set correctly 2");
+	is($MessageBus->blocking(),1,"Blocking set correctly 2");
 }
 
 $server->stop();
