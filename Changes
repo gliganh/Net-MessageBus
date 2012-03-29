@@ -18,3 +18,6 @@ Revision history for Net-MessageBus
 		Small fixes to the tests
 0.06	2012-03-13
 		Implemented fix for the stop command on Windows systems
+0.07	2012-03-16
+		Implemented blocking flag and made the timeout for waiting messages from the server configurable
+		Fixed bug in Net::MessageBus::Server module

@@ -10,11 +10,11 @@ Net::MessageBus - Pure Perl simple message bus
 
 =head1 VERSION
 
-Version 0.06
+Version 0.07
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 use base 'Net::MessageBus::Base';
 
@@ -534,6 +534,10 @@ sub read_server_messages {
 }
 
 
+=head1 SEE ALSO
+
+Check out L<Net::MessageBus::Server> which implements the server of the MessageBus and
+L<Net::MessageBus::Message> which is the OO inteface for the messages passwed between the client and the server
 
 
 =head1 AUTHOR
@@ -581,6 +585,7 @@ L<http://search.cpan.org/dist/Net-MessageBus/>
 
 =head1 ACKNOWLEDGEMENTS
 
+Thanks to Manol Roujinov for helping to improve this module
 
 =head1 LICENSE AND COPYRIGHT
 
