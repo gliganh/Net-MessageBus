@@ -10,11 +10,11 @@ Net::MessageBus::Server - Pure Perl message bus server
 
 =head1 VERSION
 
-Version 0.07
+Version 0.08
 
 =cut
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use base qw(Net::MessageBus::Base);
 
@@ -152,7 +152,7 @@ sub start {
     $self->{run} = 1;
     
     while ($self->{run} == 1) {
-    
+
         my @exceptions = $server_sel->has_exception(0);
         foreach my $broken_socket (@exceptions) {
              eval {
@@ -161,7 +161,7 @@ sub start {
              };
         }
      
-        my @ready = $server_sel->can_read(0.01);
+        my @ready = $server_sel->can_read();
  
         next unless scalar(@ready);
  
@@ -186,10 +186,7 @@ sub start {
                 
                 my $text = readline($fh);
                 
-                my $straddr = 'unknown';
-                eval {
-                    $straddr = $self->get_peer_address($fh);
-                };
+                my $straddr = $self->get_peer_address($fh);
 
                 if ($text) {
                     
@@ -204,7 +201,7 @@ sub start {
                         $request = from_json($text);
                     };
                     
-                    if (@!) {
+                    if ($@) {
                         print $fh to_json({status => 0, status_message => $@ });
                     }
                     elsif ($request->{type} eq "message") {
@@ -251,7 +248,6 @@ sub start {
                 }
             }
         }
-        
     }
 }
 
@@ -381,11 +377,15 @@ Returns the ip address for the given connection
 sub get_peer_address {
     my ($self, $fh) = @_;
 
-    my $sockaddr = getpeername($fh);
+    my $straddr = 'unknown';
     
-    my ($port, $iaddr) = sockaddr_in($sockaddr);
-    my $straddr = inet_ntoa($iaddr);
-    
+    eval {
+        my $sockaddr = getpeername($fh);
+        
+        my ($port, $iaddr) = sockaddr_in($sockaddr);
+        $straddr = inet_ntoa($iaddr);
+    };
+        
     return $straddr;
 }
 
@@ -410,6 +410,10 @@ sub subscribe_client {
         $self->{subscriptions}->{senders}->{$data->{sender}} ||= [];
         push @{$self->{subscriptions}->{senders}->{$data->{sender}}}, $self->{client_socket};
     }
+    elsif (defined $data->{type}) {
+        $self->{subscriptions}->{types}->{$data->{type}} ||= [];
+        push @{$self->{subscriptions}->{types}->{$data->{type}}}, $self->{client_socket};
+    }
     elsif (defined $data->{unsubscribe}) {
         $self->unsubscribe_client($self->{client_socket});
     }
@@ -431,11 +435,15 @@ sub unsubscribe_client {
     my $fh = shift;
     
     $self->{subscriptions}->{all} = [ grep { $_ != $fh } @{$self->{subscriptions}->{all}} ];
+    
     foreach my $group (keys %{$self->{subscriptions}->{groups}}) {
         $self->{subscriptions}->{groups}->{$group} = [ grep { $_ != $fh } @{$self->{subscriptions}->{groups}->{$group}} ];
     }
     foreach my $sender (keys %{$self->{subscriptions}->{senders}}) {
         $self->{subscriptions}->{senders}->{$sender} = [ grep { $_ != $fh } @{$self->{subscriptions}->{senders}->{$sender}} ];
+    }
+    foreach my $type (keys %{$self->{subscriptions}->{types}}) {
+        $self->{subscriptions}->{types}->{$type} = [ grep { $_ != $fh } @{$self->{subscriptions}->{types}->{$type}} ];
     }
 }
 
@@ -452,12 +460,13 @@ sub clients_registered_for_message {
     push @handles, @{ $self->{subscriptions}->{all} || [] };
     push @handles, @{ $self->{subscriptions}->{groups}->{$message->group()} || [] };
     push @handles, @{ $self->{subscriptions}->{senders}->{$message->sender()} || [] };
+    push @handles, @{ $self->{subscriptions}->{types}->{$message->type() || ''} || [] };
     
     my %seen = ();
     @handles = grep { $_ != $self->{client_socket} }
                grep { $self->{authenticated}->{$_} }
                grep { ! $seen{$_} ++ } @handles;
-    
+                   
     return @handles;
 }
 
